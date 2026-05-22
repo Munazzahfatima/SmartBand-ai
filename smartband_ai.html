@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0A0A1A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SmartBand AI">
+<link rel="manifest" href="manifest.json">
+<title>SmartBand AI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg:#0A0A1A; --bg2:#0F0F2A; --bg3:#141430;
+  --card:#12122A; --card2:#1A1A35;
+  --cyan:#00E5FF; --purple:#7C4DFF;
+  --border:rgba(0,229,255,0.15); --border2:rgba(124,77,255,0.2);
+  --text:#FFFFFF; --text2:rgba(255,255,255,0.6); --text3:rgba(255,255,255,0.35);
+  --walking:#00E676; --writing:#448AFF; --waving:#FF6D00;
+  --drinking:#00E5FF; --excercise:#D500F9; --idle:#78909C;
+  --tremor:#FFD740; --fall:#FF1744;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;user-select:none}
+
+/* SCREENS */
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column}
+.screen.active{display:flex}
+
+/* SPLASH */
+#splash{background:var(--bg);align-items:center;justify-content:center;gap:24px}
+.splash-logo{width:100px;height:100px;border:2px solid var(--cyan);border-radius:28px;display:flex;align-items:center;justify-content:center;position:relative;animation:logoPulse 2s ease-in-out infinite}
+.splash-logo svg{width:56px;height:56px}
+.splash-logo::before{content:'';position:absolute;inset:-8px;border:1px solid rgba(0,229,255,0.2);border-radius:34px;animation:ripple 2s ease-in-out infinite}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 20px rgba(0,229,255,0.3)}50%{box-shadow:0 0 40px rgba(0,229,255,0.6)}}
+@keyframes ripple{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.3)}}
+.splash-title{font-size:32px;font-weight:900;letter-spacing:2px}
+.splash-title span{color:var(--cyan)}
+.splash-sub{font-size:13px;color:var(--text2);letter-spacing:3px;text-transform:uppercase}
+.splash-bar-wrap{width:200px;height:2px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;margin-top:20px}
+.splash-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--purple),var(--cyan));border-radius:2px;animation:loadBar 2.5s ease-in-out forwards}
+@keyframes loadBar{0%{width:0%}100%{width:100%}}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-title{font-size:18px;font-weight:700;letter-spacing:1px}
+.topbar-title span{color:var(--cyan)}
+.ble-status{display:flex;align-items:center;gap:8px}
+.ble-dot{width:10px;height:10px;border-radius:50%;background:#FF1744;transition:background 0.5s;box-shadow:0 0 6px currentColor}
+.ble-dot.connected{background:#00E676;box-shadow:0 0 8px #00E676}
+.ble-label{font-size:12px;color:var(--text2)}
+
+/* BOTTOM NAV */
+.bottom-nav{background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-shrink:0}
+.nav-btn{flex:1;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:var(--text3);font-family:'Exo 2',sans-serif;font-size:11px;letter-spacing:0.5px;cursor:pointer;transition:color 0.2s}
+.nav-btn.active{color:var(--cyan)}
+.nav-btn svg{width:22px;height:22px}
+
+/* HOME */
+#home{background:var(--bg)}
+.home-content{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+.connect-btn{width:100%;padding:14px;background:transparent;border:1px solid var(--cyan);border-radius:12px;color:var(--cyan);font-family:'Exo 2',sans-serif;font-size:15px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.connect-btn:active{background:rgba(0,229,255,0.1)}
+.connect-btn.scanning{border-color:var(--purple);color:var(--purple)}
+
+/* ACTIVITY RING */
+.activity-circle-wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.activity-ring{width:180px;height:180px;border-radius:50%;border:3px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;transition:border-color 0.5s,box-shadow 0.5s}
+.activity-ring.pulse{animation:ringPulse 0.6s ease-out}
+@keyframes ringPulse{0%{transform:scale(1)}30%{transform:scale(1.05)}100%{transform:scale(1)}}
+.activity-emoji{font-size:52px;line-height:1;transition:transform 0.3s}
+.activity-name{font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-top:6px}
+.confidence-big{font-family:'Share Tech Mono',monospace;font-size:42px;font-weight:400;color:var(--cyan);transition:color 0.5s}
+.confidence-big span{font-size:20px;color:var(--text2)}
+
+/* PRED CARDS */
+.pred-cards{display:flex;flex-direction:column;gap:12px}
+.pred-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
+.pred-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pred-rank{font-size:11px;letter-spacing:2px;color:var(--text3);text-transform:uppercase}
+.pred-label-row{display:flex;align-items:center;gap:8px}
+.pred-emoji{font-size:20px}
+.pred-name{font-size:16px;font-weight:600}
+.pred-pct{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--cyan);transition:color 0.5s}
+.conf-bar-bg{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden}
+.conf-bar-fill{height:100%;width:0%;border-radius:3px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1),background 0.5s}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+.stat-val{font-family:'Share Tech Mono',monospace;font-size:22px;color:var(--cyan)}
+.stat-lbl{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+
+/* HISTORY */
+#history{background:var(--bg)}
+.history-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.history-title{font-size:16px;font-weight:600;color:var(--text2)}
+.history-actions{display:flex;gap:8px}
+.clear-btn{background:none;border:1px solid rgba(255,23,68,0.4);color:#FF1744;padding:6px 14px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer}
+.export-btn{background:none;border:1px solid rgba(0,229,255,0.4);color:var(--cyan);padding:6px 14px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer}
+.history-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.history-item{background:var(--card);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;border-left:3px solid var(--cyan);animation:slideIn 0.3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.history-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.history-info{flex:1}
+.history-act{font-size:14px;font-weight:600}
+.history-time{font-size:11px;color:var(--text3);margin-top:2px}
+.history-conf{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--text2)}
+.history-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3)}
+.history-empty svg{width:48px;height:48px;opacity:0.3}
+
+/* CHART */
+.chart-section{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chart-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:60px}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-bar{width:100%;border-radius:3px 3px 0 0;transition:height 0.5s ease;min-height:2px}
+.chart-bar-lbl{font-size:8px;color:var(--text3);text-align:center;letter-spacing:0.5px}
+
+/* SETTINGS */
+#settings{background:var(--bg)}
+.settings-scroll{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+.settings-section{display:flex;flex-direction:column;gap:2px}
+.settings-section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:8px;padding-left:4px}
+.settings-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.settings-row{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05)}
+.settings-row:last-child{border-bottom:none}
+.settings-row-label{font-size:15px;font-weight:500}
+.settings-row-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.toggle{width:48px;height:26px;background:rgba(255,255,255,0.1);border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0}
+.toggle.on{background:var(--cyan)}
+.toggle::after{content:'';position:absolute;width:20px;height:20px;background:white;border-radius:50%;top:3px;left:3px;transition:transform 0.3s}
+.toggle.on::after{transform:translateX(22px)}
+.settings-input{background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:8px;color:white;font-family:'Exo 2',sans-serif;font-size:14px;padding:8px 12px;width:160px;text-align:right}
+.slider-wrap{display:flex;align-items:center;gap:10px}
+.settings-slider{-webkit-appearance:none;width:140px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;outline:none}
+.settings-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--cyan);cursor:pointer}
+.slider-val{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--cyan);min-width:36px;text-align:right}
+.about-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:20px;text-align:center}
+.about-name{font-size:18px;font-weight:700;color:var(--cyan)}
+.about-ver{font-size:12px;color:var(--text3);margin-top:4px}
+.about-desc{font-size:13px;color:var(--text2);margin-top:10px;line-height:1.6}
+.action-btn{width:100%;padding:14px;border-radius:12px;font-family:'Exo 2',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);text-align:left;display:flex;align-items:center;gap:10px}
+.action-btn:active{background:var(--card2)}
+.action-btn.danger{border-color:rgba(255,23,68,0.4);color:#FF1744}
+
+/* FALL ALERT */
+#fall-alert{position:fixed;inset:0;z-index:1000;background:rgba(255,23,68,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;animation:alertIn 0.3s ease-out}
+#fall-alert.show{display:flex}
+@keyframes alertIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.alert-icon{font-size:80px;animation:shake 0.5s ease-in-out infinite alternate}
+@keyframes shake{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+.alert-title{font-size:28px;font-weight:900;letter-spacing:2px;text-align:center}
+.alert-sub{font-size:16px;opacity:0.8}
+.alert-timer{font-family:'Share Tech Mono',monospace;font-size:48px;font-weight:900}
+.alert-btns{display:flex;flex-direction:column;gap:12px;width:280px;margin-top:10px}
+.alert-btn-fine{padding:16px;border-radius:14px;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);color:white;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:600;cursor:pointer}
+.alert-btn-call{padding:16px;border-radius:14px;background:white;border:none;color:#FF1744;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:500;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* INSTALL BANNER */
+#install-banner{display:none;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin:0 16px;align-items:center;gap:12px;flex-shrink:0}
+#install-banner.show{display:flex}
+.install-text{flex:1;font-size:13px;color:var(--text2);line-height:1.4}
+.install-btn{background:var(--purple);border:none;color:white;padding:8px 16px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.install-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0 4px}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="screen active" id="splash">
+  <div class="splash-logo">
+    <svg viewBox="0 0 56 56" fill="none">
+      <rect x="18" y="4" width="20" height="8" rx="4" stroke="#00E5FF" stroke-width="2"/>
+      <rect x="18" y="44" width="20" height="8" rx="4" stroke="#00E5FF" stroke-width="2"/>
+      <rect x="6" y="10" width="44" height="36" rx="10" stroke="#00E5FF" stroke-width="2"/>
+      <path d="M16 28h4l4-8 4 16 4-8 4 0" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div style="text-align:center">
+    <div class="splash-title">Smart<span>Band</span> AI</div>
+    <div class="splash-sub">Intelligent Activity Monitoring</div>
+  </div>
+  <div class="splash-bar-wrap"><div class="splash-bar"></div></div>
+</div>
+
+<!-- HOME -->
+<div class="screen" id="home">
+  <div class="topbar">
+    <div class="topbar-title">Smart<span>Band</span> AI</div>
+    <div class="ble-status">
+      <div class="ble-dot" id="ble-dot"></div>
+      <div class="ble-label" id="ble-label">Disconnected</div>
+    </div>
+  </div>
+  <div id="install-banner">
+    <div class="install-text">Add SmartBand AI to your home screen for the best experience.</div>
+    <button class="install-btn" id="install-btn">Install</button>
+    <button class="install-close" onclick="document.getElementById('install-banner').classList.remove('show')">×</button>
+  </div>
+  <div class="home-content">
+    <button class="connect-btn" id="connect-btn" onclick="toggleConnect()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M8.5 2a6.5 6.5 0 0 1 6.5 6.5c0 1.5-.5 2.9-1.4 4L20 18.6 18.6 20l-6.1-6.4A6.5 6.5 0 1 1 8.5 2z"/>
+      </svg>
+      Connect to SmartBand
+    </button>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-total">0</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-session">0</div>
+        <div class="stat-lbl">Session</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-top">--</div>
+        <div class="stat-lbl">Top Activity</div>
+      </div>
+    </div>
+
+    <div class="activity-circle-wrap">
+      <div class="activity-ring" id="activity-ring">
+        <div class="activity-emoji" id="activity-emoji">⌚</div>
+        <div class="activity-name" id="activity-name">Waiting...</div>
+      </div>
+      <div class="confidence-big" id="confidence-big">--<span>%</span></div>
+    </div>
+
+    <div class="pred-cards">
+      <div class="pred-card">
+        <div class="pred-card-header">
+          <div class="pred-rank">#1 — Top Prediction</div>
+          <div class="pred-pct" id="p1-pct">--%</div>
+        </div>
+        <div class="pred-label-row" style="margin-bottom:12px">
+          <div class="pred-emoji" id="p1-emoji">⌚</div>
+          <div class="pred-name" id="p1-name">No data yet</div>
+        </div>
+        <div class="conf-bar-bg"><div class="conf-bar-fill" id="p1-bar" style="background:var(--cyan)"></div></div>
+      </div>
+      <div class="pred-card" id="card-p2">
+        <div class="pred-card-header">
+          <div class="pred-rank">#2 — Second Prediction</div>
+          <div class="pred-pct" id="p2-pct">--%</div>
+        </div>
+        <div class="pred-label-row" style="margin-bottom:12px">
+          <div class="pred-emoji" id="p2-emoji">⌚</div>
+          <div class="pred-name" id="p2-name">No data yet</div>
+        </div>
+        <div class="conf-bar-bg"><div class="conf-bar-fill" id="p2-bar" style="background:var(--purple)"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="showTab('home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" onclick="showTab('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </button>
+    <button class="nav-btn" onclick="showTab('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="screen" id="history">
+  <div class="topbar">
+    <div class="topbar-title">Smart<span>Band</span> AI</div>
+    <div class="ble-status">
+      <div class="ble-dot" id="ble-dot2"></div>
+      <div class="ble-label" id="ble-label2">Disconnected</div>
+    </div>
+  </div>
+  <div class="chart-section">
+    <div class="chart-title">Activity Distribution</div>
+    <div class="chart-bars" id="chart-bars"></div>
+  </div>
+  <div class="history-header">
+    <div class="history-title">Activity Log</div>
+    <div class="history-actions">
+      <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="clear-btn" onclick="clearHistory()">Clear</button>
+    </div>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty" id="history-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div>No activity recorded yet</div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showTab('home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn active" onclick="showTab('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </button>
+    <button class="nav-btn" onclick="showTab('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="settings">
+  <div class="topbar">
+    <div class="topbar-title">Smart<span>Band</span> AI</div>
+    <div class="ble-status"><div class="ble-dot" id="ble-dot3"></div></div>
+  </div>
+  <div class="settings-scroll">
+
+    <div class="settings-section">
+      <div class="settings-section-title">Bluetooth</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Device Name</div>
+            <div class="settings-row-sub">Arduino BLE advertised name</div>
+          </div>
+          <input class="settings-input" id="device-name" value="SmartBand" type="text">
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Auto-Reconnect</div>
+            <div class="settings-row-sub">Reconnect on signal loss</div>
+          </div>
+          <div class="toggle on" id="toggle-reconnect" onclick="this.classList.toggle('on');saveSettings()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Detection</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Confidence Threshold</div>
+            <div class="settings-row-sub">Min confidence to log result</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="settings-slider" id="threshold-slider" min="0" max="100" value="70"
+              oninput="document.getElementById('threshold-val').textContent=this.value+'%';saveSettings()">
+            <div class="slider-val" id="threshold-val">70%</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Show 2nd Prediction</div>
+            <div class="settings-row-sub">Display second-best match</div>
+          </div>
+          <div class="toggle on" id="toggle-second" onclick="this.classList.toggle('on');applySecondToggle();saveSettings()"></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Fall Alert</div>
+            <div class="settings-row-sub">Show alert + vibrate on fall</div>
+          </div>
+          <div class="toggle on" id="toggle-fall" onclick="this.classList.toggle('on');saveSettings()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Data</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Max History Records</div>
+            <div class="settings-row-sub">Older entries auto-removed</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="settings-slider" id="maxrec-slider" min="50" max="1000" step="50" value="500"
+              oninput="document.getElementById('maxrec-val').textContent=this.value;saveSettings()">
+            <div class="slider-val" id="maxrec-val">500</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Storage Used</div>
+            <div class="settings-row-sub">localStorage estimate</div>
+          </div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--cyan)" id="storage-used">-- KB</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Demo</div>
+      <div class="settings-card">
+        <div class="settings-row" style="flex-wrap:wrap;gap:8px">
+          <div class="settings-row-label">Simulate Activity</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;width:100%">
+            <button onclick="simulatePred('walking',0.921,'waving',0.045)" style="background:rgba(0,230,118,0.15);border:1px solid #00E676;color:#00E676;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🚶 Walk</button>
+            <button onclick="simulatePred('writing',0.875,'idle',0.089)" style="background:rgba(68,138,255,0.15);border:1px solid #448AFF;color:#448AFF;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">✍️ Write</button>
+            <button onclick="simulatePred('waving',0.934,'walking',0.032)" style="background:rgba(255,109,0,0.15);border:1px solid #FF6D00;color:#FF6D00;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🌊 Wave</button>
+            <button onclick="simulatePred('drinking',0.956,'idle',0.021)" style="background:rgba(0,229,255,0.15);border:1px solid #00E5FF;color:#00E5FF;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🥤 Drink</button>
+            <button onclick="simulatePred('excercise',0.841,'walking',0.112)" style="background:rgba(213,0,249,0.15);border:1px solid #D500F9;color:#D500F9;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🏃 Exercise</button>
+            <button onclick="simulatePred('tremor',0.778,'idle',0.156)" style="background:rgba(255,215,64,0.15);border:1px solid #FFD740;color:#FFD740;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">📳 Tremor</button>
+            <button onclick="simulatePred('fall',0.932,'idle',0.041)" style="background:rgba(255,23,68,0.15);border:1px solid #FF1744;color:#FF1744;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">⚠️ Fall</button>
+            <button onclick="simulatePred('idle',0.891,'writing',0.067)" style="background:rgba(120,144,156,0.15);border:1px solid #78909C;color:#78909C;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">😴 Idle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Actions</div>
+      <button class="action-btn" onclick="exportCSV()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export History as CSV
+      </button>
+      <button class="action-btn" onclick="exportJSON()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export History as JSON
+      </button>
+      <button class="action-btn danger" onclick="confirmClearAll()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        Clear All Data
+      </button>
+    </div>
+
+    <div class="about-card">
+      <div class="about-name">SmartBand AI</div>
+      <div class="about-ver">Version 2.0.0 — Arduino Nano 33 BLE Sense Rev2</div>
+      <div class="about-desc">Real-time activity recognition using Edge Impulse ML model. Classifies 8 activities via IMU sensor fusion over Bluetooth LE. Data stored locally on your device.</div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showTab('home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" onclick="showTab('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </button>
+    <button class="nav-btn active" onclick="showTab('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- FALL ALERT -->
+<div id="fall-alert">
+  <div class="alert-icon">⚠️</div>
+  <div class="alert-title">FALL DETECTED</div>
+  <div class="alert-sub">Are you okay?</div>
+  <div class="alert-timer" id="alert-timer">10</div>
+  <div class="alert-btns">
+    <button class="alert-btn-fine" onclick="dismissFall()">✓ I'm Fine</button>
+    <button class="alert-btn-call" onclick="callHelp()">📞 Call for Help</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+const BLE_SERVICE_UUID = '0000180c-0000-1000-8000-00805f9b34fb';
+const BLE_CHAR_UUID    = '00002a56-0000-1000-8000-00805f9b34fb';
+
+const ACTIVITY_MAP = {
+  walking:   { emoji: '🚶', color: '#00E676' },
+  writing:   { emoji: '✍️', color: '#448AFF' },
+  waving:    { emoji: '🌊', color: '#FF6D00' },
+  drinking:  { emoji: '🥤', color: '#00E5FF' },
+  excercise: { emoji: '🏃', color: '#D500F9' },
+  idle:      { emoji: '😴', color: '#78909C' },
+  tremor:    { emoji: '📳', color: '#FFD740' },
+  fall:      { emoji: '⚠️', color: '#FF1744' }
+};
+
+const STORAGE_KEY_HISTORY  = 'sb_history_v2';
+const STORAGE_KEY_SETTINGS = 'sb_settings_v2';
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let bleDevice = null, bleChar = null;
+let isConnected = false;
+let sessionCount = 0;
+let fallTimer = null;
+let deferredInstallPrompt = null;
+let reconnectTimeout = null;
+
+// ── History (persisted) ──────────────────────────────────────
+let historyData = [];
+try { historyData = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || '[]'); } catch(e) { historyData = []; }
+
+// ── Settings (persisted) ─────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  deviceName: 'SmartBand',
+  threshold: 70,
+  showSecond: true,
+  fallAlert: true,
+  autoReconnect: true,
+  maxRecords: 500
+};
+let settings = Object.assign({}, DEFAULT_SETTINGS);
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS) || '{}');
+  settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+} catch(e) {}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  applySettings();
+  updateStats();
+
+  // Splash → Home
+  setTimeout(() => {
+    document.getElementById('splash').classList.remove('active');
+    document.getElementById('home').classList.add('active');
+  }, 2800);
+
+  // PWA install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.getElementById('install-banner').classList.add('show');
+  });
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('install-banner').classList.remove('show');
+    deferredInstallPrompt = null;
+  });
+
+  // Visibility change — reconnect when app comes back to foreground
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !isConnected && settings.autoReconnect && bleDevice) {
+      scheduleReconnect(2000);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════════
+function applySettings() {
+  document.getElementById('device-name').value = settings.deviceName;
+  document.getElementById('threshold-slider').value = settings.threshold;
+  document.getElementById('threshold-val').textContent = settings.threshold + '%';
+  document.getElementById('maxrec-slider').value = settings.maxRecords;
+  document.getElementById('maxrec-val').textContent = settings.maxRecords;
+  setToggle('toggle-second', settings.showSecond);
+  setToggle('toggle-fall', settings.fallAlert);
+  setToggle('toggle-reconnect', settings.autoReconnect);
+  applySecondToggle();
+  updateStorageDisplay();
+}
+
+function saveSettings() {
+  settings.deviceName   = document.getElementById('device-name').value || 'SmartBand';
+  settings.threshold    = parseInt(document.getElementById('threshold-slider').value);
+  settings.showSecond   = document.getElementById('toggle-second').classList.contains('on');
+  settings.fallAlert    = document.getElementById('toggle-fall').classList.contains('on');
+  settings.autoReconnect= document.getElementById('toggle-reconnect').classList.contains('on');
+  settings.maxRecords   = parseInt(document.getElementById('maxrec-slider').value);
+  localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+  updateStorageDisplay();
+}
+
+function setToggle(id, val) {
+  const el = document.getElementById(id);
+  if (val) el.classList.add('on'); else el.classList.remove('on');
+}
+
+function applySecondToggle() {
+  const show = document.getElementById('toggle-second').classList.contains('on');
+  document.getElementById('card-p2').style.display = show ? '' : 'none';
+}
+
+function updateStorageDisplay() {
+  try {
+    const bytes = new Blob([localStorage.getItem(STORAGE_KEY_HISTORY) || '']).size;
+    document.getElementById('storage-used').textContent = (bytes / 1024).toFixed(1) + ' KB';
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showTab(tab, btn) {
+  ['home','history','settings'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById(tab).classList.add('active');
+
+  // Update nav buttons in the active screen
+  document.querySelectorAll('#' + tab + ' .nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (tab === 'history') { renderHistory(); renderChart(); }
+  if (tab === 'settings') { updateStorageDisplay(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BLE CONNECTION
+// ═══════════════════════════════════════════════════════════════
+async function toggleConnect() {
+  if (isConnected) { disconnect(); return; }
+  await connectBLE();
+}
+
+async function connectBLE() {
+  if (!navigator.bluetooth) {
+    showToast('Web Bluetooth not supported. Use Chrome on Android.');
+    return;
+  }
+  const btn = document.getElementById('connect-btn');
+  btn.classList.add('scanning');
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Scanning...';
+
+  try {
+    bleDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ name: settings.deviceName }],
+      optionalServices: [BLE_SERVICE_UUID]
+    });
+    bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+    await doConnect();
+  } catch(e) {
+    console.warn('BLE connect error:', e);
+    resetConnectBtn();
+    if (e.name !== 'NotFoundError' && e.name !== 'AbortError') {
+      showToast('Connection failed: ' + e.message);
+    } else {
+      showToast('No device selected.');
+    }
+  }
+}
+
+async function doConnect() {
+  try {
+    const server  = await bleDevice.gatt.connect();
+    const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+    bleChar        = await service.getCharacteristic(BLE_CHAR_UUID);
+    await bleChar.startNotifications();
+    bleChar.addEventListener('characteristicvaluechanged', onDataReceived);
+    setConnected(true);
+  } catch(e) {
+    console.warn('GATT connect error:', e);
+    resetConnectBtn();
+    showToast('GATT error: ' + e.message);
+  }
+}
+
+function disconnect() {
+  clearTimeout(reconnectTimeout);
+  if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+  bleDevice = null; bleChar = null;
+  setConnected(false);
+}
+
+function onDisconnected() {
+  setConnected(false);
+  if (settings.autoReconnect && bleDevice) {
+    showToast('Signal lost. Reconnecting...');
+    scheduleReconnect(3000);
+  }
+}
+
+function scheduleReconnect(ms) {
+  clearTimeout(reconnectTimeout);
+  reconnectTimeout = setTimeout(async () => {
+    if (!isConnected && bleDevice) {
+      try { await doConnect(); }
+      catch(e) { scheduleReconnect(5000); }
+    }
+  }, ms);
+}
+
+function setConnected(val) {
+  isConnected = val;
+  ['ble-dot','ble-dot2','ble-dot3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('connected', val);
+  });
+  ['ble-label','ble-label2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val ? 'Connected' : 'Disconnected';
+  });
+  const btn = document.getElementById('connect-btn');
+  btn.classList.remove('scanning');
+  if (val) {
+    btn.style.borderColor = '#00E676'; btn.style.color = '#00E676';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Connected — Tap to Disconnect';
+    showToast('Connected to ' + settings.deviceName + '!');
+  } else {
+    resetConnectBtn();
+    showToast('Disconnected.');
+  }
+}
+
+function resetConnectBtn() {
+  const btn = document.getElementById('connect-btn');
+  btn.classList.remove('scanning');
+  btn.style.borderColor = ''; btn.style.color = '';
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 2a6.5 6.5 0 0 1 6.5 6.5c0 1.5-.5 2.9-1.4 4L20 18.6 18.6 20l-6.1-6.4A6.5 6.5 0 1 1 8.5 2z"/></svg> Connect to SmartBand';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DATA PARSING
+// ═══════════════════════════════════════════════════════════════
+function onDataReceived(e) {
+  const raw = new TextDecoder().decode(e.target.value).trim();
+  console.log('BLE RX:', raw);
+
+  // Format: PRED:label1:val1:label2:val2
+  if (!raw.startsWith('PRED:')) return;
+  const parts = raw.split(':');
+  if (parts.length < 5) return;
+
+  const label1 = parts[1].toLowerCase().trim();
+  const val1   = parseFloat(parts[2]);
+  const label2 = parts[3].toLowerCase().trim();
+  const val2   = parseFloat(parts[4]);
+
+  if (isNaN(val1) || isNaN(val2)) return;
+  processPrediction(label1, val1, label2, val2);
+}
+
+function processPrediction(label1, val1, label2, val2) {
+  const threshold = settings.threshold / 100;
+
+  // Update UI always
+  updateUI(label1, val1, label2, val2);
+
+  // Only log if above threshold
+  if (val1 >= threshold) {
+    addToHistory(label1, val1, label2, val2);
+    sessionCount++;
+    updateStats();
+  }
+
+  // Fall detection
+  if (label1 === 'fall' && settings.fallAlert) {
+    triggerFallAlert();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UI UPDATE
+// ═══════════════════════════════════════════════════════════════
+function updateUI(label1, val1, label2, val2) {
+  const a1 = ACTIVITY_MAP[label1] || { emoji: '❓', color: '#FFFFFF' };
+  const a2 = ACTIVITY_MAP[label2] || { emoji: '❓', color: '#FFFFFF' };
+  const pct1 = (val1 * 100).toFixed(1);
+  const pct2 = (val2 * 100).toFixed(1);
+
+  // Ring
+  const ring = document.getElementById('activity-ring');
+  ring.style.borderColor = a1.color;
+  ring.style.boxShadow = '0 0 30px ' + a1.color + '40';
+  ring.classList.remove('pulse');
+  void ring.offsetWidth;
+  ring.classList.add('pulse');
+
+  document.getElementById('activity-emoji').textContent = a1.emoji;
+  document.getElementById('activity-name').textContent  = label1.toUpperCase();
+  document.getElementById('confidence-big').innerHTML   = pct1 + '<span>%</span>';
+  document.getElementById('confidence-big').style.color = a1.color;
+
+  // Card 1
+  document.getElementById('p1-emoji').textContent = a1.emoji;
+  document.getElementById('p1-name').textContent  = label1.charAt(0).toUpperCase() + label1.slice(1);
+  document.getElementById('p1-pct').textContent   = pct1 + '%';
+  document.getElementById('p1-pct').style.color   = a1.color;
+  document.getElementById('p1-bar').style.width   = pct1 + '%';
+  document.getElementById('p1-bar').style.background = a1.color;
+
+  // Card 2
+  document.getElementById('p2-emoji').textContent = a2.emoji;
+  document.getElementById('p2-name').textContent  = label2.charAt(0).toUpperCase() + label2.slice(1);
+  document.getElementById('p2-pct').textContent   = pct2 + '%';
+  document.getElementById('p2-pct').style.color   = a2.color;
+  document.getElementById('p2-bar').style.width   = pct2 + '%';
+  document.getElementById('p2-bar').style.background = a2.color;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HISTORY & STORAGE
+// ═══════════════════════════════════════════════════════════════
+function addToHistory(label1, val1, label2, val2) {
+  const entry = {
+    ts: Date.now(),
+    label1, val1: parseFloat(val1.toFixed(4)),
+    label2, val2: parseFloat(val2.toFixed(4))
+  };
+  historyData.unshift(entry);
+
+  // Trim to max records
+  if (historyData.length > settings.maxRecords) {
+    historyData = historyData.slice(0, settings.maxRecords);
+  }
+
+  persistHistory();
+
+  // Live update if history tab is open
+  if (document.getElementById('history').classList.contains('active')) {
+    renderHistory();
+    renderChart();
+  }
+}
+
+function persistHistory() {
+  try {
+    localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(historyData));
+  } catch(e) {
+    // Storage full — remove oldest 10%
+    historyData = historyData.slice(0, Math.floor(historyData.length * 0.9));
+    try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(historyData)); } catch(e2) {}
+    showToast('Storage nearly full. Old records trimmed.');
+  }
+}
+
+function renderHistory() {
+  const list  = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+
+  if (historyData.length === 0) {
+    empty.style.display = '';
+    // Remove all items except empty placeholder
+    Array.from(list.children).forEach(c => { if (c !== empty) c.remove(); });
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Rebuild list (keep it fast — only show last 200 in DOM)
+  const visible = historyData.slice(0, 200);
+  const existing = Array.from(list.querySelectorAll('.history-item'));
+
+  // Remove extras
+  existing.slice(visible.length).forEach(el => el.remove());
+
+  visible.forEach((entry, i) => {
+    const a = ACTIVITY_MAP[entry.label1] || { emoji: '❓', color: '#FFFFFF' };
+    const pct = (entry.val1 * 100).toFixed(1);
+    const time = formatTime(entry.ts);
+
+    let el = existing[i];
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'history-item';
+      el.innerHTML = `
+        <div class="history-dot"></div>
+        <div class="history-info">
+          <div class="history-act"></div>
+          <div class="history-time"></div>
+        </div>
+        <div class="history-conf"></div>`;
+      list.appendChild(el);
+    }
+    el.style.borderLeftColor = a.color;
+    el.querySelector('.history-dot').style.background = a.color;
+    el.querySelector('.history-act').textContent = a.emoji + ' ' + entry.label1.charAt(0).toUpperCase() + entry.label1.slice(1);
+    el.querySelector('.history-time').textContent = time;
+    el.querySelector('.history-conf').textContent = pct + '%';
+  });
+}
+
+function renderChart() {
+  const container = document.getElementById('chart-bars');
+  container.innerHTML = '';
+
+  // Count per activity
+  const counts = {};
+  historyData.forEach(e => { counts[e.label1] = (counts[e.label1] || 0) + 1; });
+  const max = Math.max(...Object.values(counts), 1);
+
+  Object.entries(ACTIVITY_MAP).forEach(([key, val]) => {
+    const count = counts[key] || 0;
+    const heightPct = (count / max) * 100;
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-bar-wrap';
+    wrap.innerHTML = `
+      <div class="chart-bar" style="height:${heightPct}%;background:${val.color};opacity:${count>0?1:0.2}"></div>
+      <div class="chart-bar-lbl">${val.emoji}</div>`;
+    container.appendChild(wrap);
+  });
+}
+
+function clearHistory() {
+  if (!confirm('Clear all activity history?')) return;
+  historyData = [];
+  persistHistory();
+  sessionCount = 0;
+  updateStats();
+  renderHistory();
+  renderChart();
+  showToast('History cleared.');
+}
+
+function confirmClearAll() {
+  if (!confirm('Delete ALL data including settings? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY_HISTORY);
+  localStorage.removeItem(STORAGE_KEY_SETTINGS);
+  historyData = [];
+  settings = Object.assign({}, DEFAULT_SETTINGS);
+  sessionCount = 0;
+  applySettings();
+  updateStats();
+  showToast('All data cleared.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════════════
+function updateStats() {
+  document.getElementById('stat-total').textContent   = historyData.length;
+  document.getElementById('stat-session').textContent = sessionCount;
+
+  // Top activity overall
+  const counts = {};
+  historyData.forEach(e => { counts[e.label1] = (counts[e.label1] || 0) + 1; });
+  const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+  const topEl = document.getElementById('stat-top');
+  if (top) {
+    const a = ACTIVITY_MAP[top[0]] || { emoji: '❓' };
+    topEl.textContent = a.emoji;
+    topEl.title = top[0];
+  } else {
+    topEl.textContent = '--';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════════
+function exportCSV() {
+  if (historyData.length === 0) { showToast('No data to export.'); return; }
+  const header = 'timestamp,datetime,activity1,confidence1,activity2,confidence2\n';
+  const rows = historyData.map(e =>
+    `${e.ts},${new Date(e.ts).toISOString()},${e.label1},${(e.val1*100).toFixed(2)},${e.label2},${(e.val2*100).toFixed(2)}`
+  ).join('\n');
+  downloadFile('smartband_history.csv', 'text/csv', header + rows);
+  showToast('CSV exported!');
+}
+
+function exportJSON() {
+  if (historyData.length === 0) { showToast('No data to export.'); return; }
+  const out = historyData.map(e => ({
+    timestamp: e.ts,
+    datetime: new Date(e.ts).toISOString(),
+    activity1: e.label1, confidence1: parseFloat((e.val1*100).toFixed(2)),
+    activity2: e.label2, confidence2: parseFloat((e.val2*100).toFixed(2))
+  }));
+  downloadFile('smartband_history.json', 'application/json', JSON.stringify(out, null, 2));
+  showToast('JSON exported!');
+}
+
+function downloadFile(name, type, content) {
+  const blob = new Blob([content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FALL ALERT
+// ═══════════════════════════════════════════════════════════════
+function triggerFallAlert() {
+  document.getElementById('fall-alert').classList.add('show');
+  if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+
+  let countdown = 10;
+  document.getElementById('alert-timer').textContent = countdown;
+  clearInterval(fallTimer);
+  fallTimer = setInterval(() => {
+    countdown--;
+    document.getElementById('alert-timer').textContent = countdown;
+    if (countdown <= 0) {
+      clearInterval(fallTimer);
+      callHelp();
+    }
+  }, 1000);
+}
+
+function dismissFall() {
+  clearInterval(fallTimer);
+  document.getElementById('fall-alert').classList.remove('show');
+  showToast('Glad you\'re okay!');
+}
+
+function callHelp() {
+  clearInterval(fallTimer);
+  document.getElementById('fall-alert').classList.remove('show');
+  // Attempt to open emergency call — works on mobile
+  window.location.href = 'tel:112';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DEMO / SIMULATE
+// ═══════════════════════════════════════════════════════════════
+function simulatePred(l1, v1, l2, v2) {
+  processPrediction(l1, v1, l2, v2);
+  showTab('home', null);
+  // Manually set home nav active
+  document.querySelectorAll('#home .nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('#home .nav-btn:first-child').classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function formatTime(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1)  return 'Just now';
+  if (diffMin < 60) return diffMin + 'm ago';
+  if (diffMin < 1440) return Math.floor(diffMin/60) + 'h ago';
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+
+<!-- PWA Service Worker registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
