@@ -1,173 +1,158 @@
 # SmartBand AI
 
-A real-time activity recognition app for the **Arduino Nano 33 BLE Sense Rev2**. The Arduino runs an Edge Impulse ML model that classifies 8 physical activities using the onboard IMU, then streams predictions to your phone over Bluetooth LE. The app displays live results, logs history, and alerts on fall detection.
+A real-time wrist-worn activity recognition system built on the **Arduino Nano 33 BLE Sense Rev2**. An Edge Impulse deep learning model runs directly on the microcontroller, classifying 8 physical activities from IMU sensor data and streaming predictions to a mobile app over Bluetooth LE.
+
+**Live App:** https://munazzahfatima.github.io/SmartBand-ai/smartband_ai.html
 
 ---
 
-## Demo
+## Project Overview
 
-| Home Screen | History | Settings |
-|---|---|---|
-| Live activity + confidence % | Activity log + chart | BLE config + export |
+```
+IMU Sensors (6-axis)
+  ax, ay, az, gx, gy, gz
+        │
+        ▼
+  Spectral Analysis
+  (78 spectral features)
+        │
+        ▼
+  Dense Neural Network
+  128 → 64 → 32 → 8 classes
+        │
+        ▼
+  BLE Notification
+  "PRED:walking:0.921:waving:0.045"
+        │
+        ▼
+  SmartBand AI App
+  (Live display + history + alerts)
+```
 
 ---
 
-## Features
+## ML Model — Edge Impulse
+
+### Dataset
+
+| Property | Value |
+|---|---|
+| Total recording time | 1h 55m 14s |
+| Training samples | 645 |
+| Test samples | 146 |
+| Total samples | 791 |
+| Number of classes | 8 |
+
+**Samples per class:**
+
+| Activity | Samples |
+|---|---|
+| drinking | 85 |
+| excercise | 80 |
+| fall | 79 |
+| idle | 80 |
+| tremor | 83 |
+| walking | 85 |
+| waving | 79 |
+| writing | 74 |
+
+---
+
+### Impulse Design
+
+**Input block — Time Series Data**
+- Input axes: `ax, ay, az, gx, gy, gz` (6-axis IMU)
+- Window size: 10,000 ms
+- Window stride: 486.55 ms
+- Sampling frequency: 16 Hz
+- Zero-pad data: enabled
+
+**Processing block — Spectral Analysis**
+- Extracts frequency-domain features from all 6 axes
+- Output: **78 spectral features**
+
+**Learning block — Classification (Keras)**
+- Input: 78 spectral features
+- Output: 8 activity classes
+
+---
+
+### Neural Network Architecture
+
+```
+┌─────────────────────────────────┐
+│     Input Layer  (78 features)  │
+├─────────────────────────────────┤
+│     Dense Layer  (128 neurons)  │  ReLU
+├─────────────────────────────────┤
+│     Dense Layer  (64 neurons)   │  ReLU
+├─────────────────────────────────┤
+│     Dense Layer  (32 neurons)   │  ReLU
+├─────────────────────────────────┤
+│     Output Layer (8 classes)    │  Softmax
+└─────────────────────────────────┘
+```
+
+**Training settings:**
+- Training cycles (epochs): 100
+- Optimizer: Learned optimizer (Edge Impulse EON)
+- Loss function: Categorical Cross-Entropy
+- Training processor: CPU
+
+---
+
+### Training Results
+
+| Metric | Value |
+|---|---|
+| **Accuracy** | **97.7%** |
+| **Loss** | **0.07** |
+| Weighted avg Precision | 0.98 |
+| Weighted avg Recall | 0.98 |
+| Weighted avg F1 Score | 0.98 |
+| Area under ROC Curve | 1.00 |
+
+**Confusion Matrix (Validation Set):**
+
+| | DRINKING | EXCERCISE | FALL | IDLE | TREMOR | WALKING | WAVING | WRITING | F1 |
+|---|---|---|---|---|---|---|---|---|---|
+| **DRINKING** | **94.7%** | 0% | 0% | 5.3% | 0% | 0% | 0% | 0% | 0.95 |
+| **EXCERCISE** | 5.6% | **94.4%** | 0% | 0% | 0% | 0% | 0% | 0% | 0.97 |
+| **FALL** | 0% | 0% | **100%** | 0% | 0% | 0% | 0% | 0% | 1.00 |
+| **IDLE** | 0% | 0% | 0% | **100%** | 0% | 0% | 0% | 0% | 0.97 |
+| **TREMOR** | 0% | 0% | 0% | 0% | **91.7%** | 0% | 8.3% | 0% | 0.96 |
+| **WALKING** | 0% | 0% | 0% | 0% | 0% | **100%** | 0% | 0% | 1.00 |
+| **WAVING** | 0% | 0% | 0% | 0% | 0% | 0% | **100%** | 0% | 0.98 |
+| **WRITING** | 0% | 0% | 0% | 0% | 0% | 0% | 0% | **100%** | 1.00 |
+
+5 out of 8 classes achieved 100% accuracy. The model is particularly strong at detecting falls, walking, waving, idle, and writing.
+
+---
+
+### On-Device Performance (Arduino Nano 33 BLE Sense Rev2)
+
+| Metric | Value |
+|---|---|
+| Inferencing time | **1 ms** |
+| Peak RAM usage | **1.7 KB** |
+| Flash usage | **35.0 KB** |
+| Engine | EON™ Compiler |
+
+The EON Compiler optimizes the model specifically for the nRF52840 microcontroller, achieving 1ms inference — fast enough for real-time continuous classification.
+
+---
+
+## App Features
 
 - **Live BLE connection** — connects directly to the Arduino over Bluetooth LE
-- **8 activity classes** — Walking, Writing, Waving, Drinking, Exercise, Idle, Tremor, Fall
 - **Real-time display** — animated activity ring, confidence bars, top 2 predictions
 - **Fall detection alert** — full-screen alert with 10-second countdown, auto-calls 112
 - **Activity history** — timestamped log stored locally on your device
-- **Activity chart** — visual distribution of all recorded activities
+- **Activity distribution chart** — visual breakdown of all recorded activities
 - **Data export** — download history as CSV or JSON
-- **Persistent storage** — data survives app close using localStorage (up to 500 records, configurable)
+- **Persistent storage** — data survives app close using localStorage
 - **Auto-reconnect** — reconnects automatically if BLE signal drops
 - **PWA** — installable on Android as a home screen app, works offline
-
----
-
-## Hardware Required
-
-- Arduino Nano 33 BLE Sense Rev2
-- Wrist mount or enclosure (optional)
-- Android phone with Chrome browser
-
----
-
-## Project Structure
-
-```
-smartband_ai.html        ← Main app (HTML + CSS + JavaScript, single file)
-manifest.json            ← PWA manifest (makes app installable)
-sw.js                    ← Service worker (offline support)
-nano_ble33_sense_rev2_fusion/
-  └── nano_ble33_sense_rev2_fusion.ino   ← Arduino sketch
-README.md
-```
-
----
-
-## Arduino Setup
-
-### Libraries Required
-
-Install these in Arduino IDE via **Tools → Manage Libraries**:
-
-| Library | Purpose |
-|---|---|
-| `ArduinoBLE` | Bluetooth LE communication |
-| `Arduino_BMI270_BMM150` | IMU (accelerometer + gyroscope) |
-| `Smart_Wristband_Activity_Recognition_inferencing` | Edge Impulse ML model |
-
-> The inferencing library is generated from your Edge Impulse project. Export it as an Arduino library and install via **Sketch → Include Library → Add .ZIP Library**.
-
-### BLE Configuration
-
-| Parameter | Value |
-|---|---|
-| Device name | `SmartBand` |
-| Service UUID | `180C` |
-| Characteristic UUID | `2A56` |
-| Mode | Notify |
-
-### Data Format
-
-The Arduino sends a UTF-8 string over BLE every inference cycle:
-
-```
-PRED:<label1>:<confidence1>:<label2>:<confidence2>
-```
-
-Example:
-```
-PRED:walking:0.921:waving:0.045
-```
-
-### Upload Steps
-
-1. Open `nano_ble33_sense_rev2_fusion.ino` in Arduino IDE
-2. Select board: **Tools → Board → Arduino Nano 33 BLE**
-3. Select the correct COM port
-4. Click Upload
-5. Open Serial Monitor at 115200 baud to verify output
-6. LED solid = BLE connected, LED blinking = error
-
----
-
-## App Setup & Deployment
-
-### Option 1 — GitHub Pages (Recommended)
-
-Free, permanent HTTPS URL. Web Bluetooth works natively.
-
-1. Create a free account at [github.com](https://github.com)
-2. Create a new **public** repository
-3. Upload `smartband_ai.html`, `manifest.json`, `sw.js`
-4. Go to **Settings → Pages → Source: main branch**
-5. Your app is live at `https://yourusername.github.io/repo-name/smartband_ai.html`
-
-### Option 2 — Netlify
-
-1. Rename `smartband_ai.html` to `index.html`
-2. Go to [netlify.com](https://netlify.com) and sign up free
-3. Drag your project folder onto the deploy area
-4. Get an instant URL like `https://your-app.netlify.app`
-
-### Option 3 — html2app.dev (Android APK)
-
-Wraps the app into an installable APK file.
-
-1. Rename `smartband_ai.html` to `index.html`
-2. Zip all 3 files together
-3. Upload the zip at [html2app.dev](https://html2app.dev)
-4. Fill in app name and package name, click Build
-5. Download the APK and install on your Android phone
-
-> **Note:** Web Bluetooth may not work inside a basic WebView APK. GitHub Pages + Chrome is more reliable for BLE.
-
-### Installing as a Home Screen App (Android)
-
-1. Open the app URL in **Chrome on Android**
-2. Tap the 3-dot menu → **Add to Home Screen**
-3. The app installs like a native app with its own icon
-
----
-
-## Using the App
-
-### Connecting to the Arduino
-
-1. Make sure the Arduino is powered and running the sketch
-2. Open the app → tap **Connect to SmartBand**
-3. Select `SmartBand` from the Bluetooth device list
-4. The status dot turns green — live predictions start appearing
-
-### Tabs
-
-**Home**
-- Shows the current activity with emoji, name, and confidence %
-- Two prediction cards with animated confidence bars
-- Session counter and top activity stats
-
-**History**
-- Full timestamped log of all detected activities
-- Bar chart showing activity distribution
-- Export as CSV or JSON
-- Clear history button
-
-**Settings**
-- Change the BLE device name to match your Arduino
-- Set confidence threshold (predictions below this are not logged)
-- Toggle second prediction card
-- Toggle fall alert
-- Toggle auto-reconnect
-- Set max history records
-- Export or clear all data
-
-### Demo Mode
-
-In Settings → Simulate Activity, tap any activity button to test the UI without a connected Arduino.
 
 ---
 
@@ -184,19 +169,73 @@ In Settings → Simulate Activity, tap any activity button to test the UI withou
 | tremor | 📳 | Involuntary shaking |
 | fall | ⚠️ | Sudden fall event |
 
-> Note: `excercise` is spelled this way intentionally to match the Edge Impulse model label.
+---
+
+## Project Structure
+
+```
+SmartBand-ai/
+├── smartband_ai.html                          ← Mobile web app
+├── manifest.json                              ← PWA manifest
+├── sw.js                                      ← Service worker (offline)
+├── README.md                                  ← This file
+├── model/
+│   └── model_info.py                          ← ML model documentation (Python)
+└── nano_ble33_sense_rev2_fusion/
+    └── nano_ble33_sense_rev2_fusion.ino       ← Arduino sketch (C++)
+```
 
 ---
 
-## Fall Detection
+## Hardware
 
-When a fall is detected with confidence above the threshold:
+- Arduino Nano 33 BLE Sense Rev2
+- Onboard BMI270 accelerometer + gyroscope
+- Onboard BMM150 magnetometer
+- nRF52840 SoC (Cortex-M4F, 64 MHz, 1MB Flash, 256KB RAM)
 
-1. A full-screen red alert appears
-2. The phone vibrates
-3. A 10-second countdown starts
-4. Tap **I'm Fine** to dismiss
-5. If no response, the app automatically dials **112** (emergency services)
+---
+
+## Arduino Libraries Required
+
+Install via Arduino IDE → Tools → Manage Libraries:
+
+| Library | Purpose |
+|---|---|
+| `ArduinoBLE` | Bluetooth LE communication |
+| `Arduino_BMI270_BMM150` | IMU sensor driver |
+| `Smart_Wristband_Activity_Recognition_inferencing` | Edge Impulse model (install as .zip) |
+
+---
+
+## BLE Protocol
+
+| Parameter | Value |
+|---|---|
+| Device name | `SmartBand` |
+| Service UUID | `180C` |
+| Characteristic UUID | `2A56` |
+| Mode | Notify |
+| Data format | `PRED:<label1>:<val1>:<label2>:<val2>` |
+
+Example message:
+```
+PRED:walking:0.921:waving:0.045
+```
+
+---
+
+## Deployment
+
+The app is deployed on GitHub Pages and accessible at:
+
+```
+https://munazzahfatima.github.io/SmartBand-ai/smartband_ai.html
+```
+
+Open in **Chrome on Android** → tap 3-dot menu → **Add to Home Screen** to install as a native-like app.
+
+Web Bluetooth requires Chrome on Android or Chrome on desktop. Safari and Firefox are not supported.
 
 ---
 
@@ -210,36 +249,15 @@ When a fall is detected with confidence above the threshold:
 | Firefox | ❌ Not supported |
 | Safari (iOS) | ❌ Not supported |
 
-Web Bluetooth requires **HTTPS**. GitHub Pages and Netlify both provide this automatically.
-
 ---
 
-## Data Storage
+## Languages Used
 
-- All history is stored in `localStorage` on your device
-- No data is sent to any server
-- Default limit: 500 records (configurable up to 1000)
-- When storage is nearly full, the oldest 10% of records are automatically removed
-- Export your data as CSV or JSON before clearing
-
----
-
-## Troubleshooting
-
-**"Web Bluetooth not supported"**
-→ Use Chrome on Android or Chrome on desktop. Not Firefox or Safari.
-
-**Device not found during scan**
-→ Make sure the Arduino is powered and the sketch is running. Check the device name in Settings matches the Arduino sketch (`SmartBand` by default).
-
-**Connected but no data**
-→ Open Arduino Serial Monitor to confirm predictions are printing. Check the BLE service/characteristic UUIDs match between the sketch and the app.
-
-**BLE keeps disconnecting**
-→ Enable Auto-Reconnect in Settings. Keep the phone within 5–10 metres of the Arduino.
-
-**Fall alert not triggering**
-→ Make sure Fall Alert is enabled in Settings and the confidence threshold is not set too high.
+| Language | Purpose |
+|---|---|
+| C++ (Arduino) | Firmware, IMU reading, ML inference, BLE transmission |
+| Python | ML model documentation, dataset analysis |
+| HTML / CSS / JavaScript | Mobile web app, BLE Web API, data storage |
 
 ---
 
