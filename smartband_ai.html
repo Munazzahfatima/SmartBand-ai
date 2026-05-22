@@ -657,26 +657,20 @@ async function connectBLE() {
 
 async function doConnect() {
   try {
-    const server  = await bleDevice.gatt.connect();
-    // Try primary service
-    let service;
-    try {
-      service = await server.getPrimaryService(BLE_SERVICE_UUID);
-    } catch(e) {
-      // Fallback: try getting all services
-      console.warn('Primary service lookup failed, trying fallback:', e);
-      showToast('GATT error - try forgetting device in Bluetooth settings then reconnect');
-      resetConnectBtn();
-      return;
-    }
+    showToast('Connecting to GATT...');
+    const server = await bleDevice.gatt.connect();
+    showToast('GATT connected, finding service...');
+    const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+    showToast('Service found, getting characteristic...');
     bleChar = await service.getCharacteristic(BLE_CHAR_UUID);
+    showToast('Characteristic found, subscribing...');
     await bleChar.startNotifications();
     bleChar.addEventListener('characteristicvaluechanged', onDataReceived);
     setConnected(true);
   } catch(e) {
-    console.warn('GATT connect error:', e);
+    console.error('doConnect error:', e.name, e.message);
+    showToast('Failed: ' + e.name + ' — ' + e.message);
     resetConnectBtn();
-    showToast('GATT error: ' + e.message + ' — Forget SmartBand in phone Bluetooth settings and retry');
   }
 }
 
