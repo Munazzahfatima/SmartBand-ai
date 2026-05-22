@@ -55,10 +55,11 @@ void setup() {
         while (1) { blinkLED(5, 100); delay(500); }
     }
 
-    BLE.setLocalName("SmartBand");
-    BLE.setAdvertisedService(activityService);
+    // BLE — order matters: add characteristic to service FIRST, then advertise
     activityService.addCharacteristic(predCharacteristic);
     BLE.addService(activityService);
+    BLE.setLocalName("SmartBand");
+    BLE.setAdvertisedService(activityService);
     predCharacteristic.writeValue("READY");
     BLE.advertise();
 
@@ -71,14 +72,19 @@ void setup() {
 
 // ── loop ─────────────────────────────────────────────────────────────────────
 void loop() {
+    // Poll BLE continuously
+    BLE.poll();
+
     BLEDevice central = BLE.central();
 
     if (central) {
         Serial.print("Connected: "); Serial.println(central.address());
-        digitalWrite(LED_BUILTIN, HIGH);   // solid LED = connected
+        digitalWrite(LED_BUILTIN, HIGH);
 
         while (central.connected()) {
+            BLE.poll();  // Keep BLE stack alive during inference
             runInference();
+            BLE.poll();  // Poll again after inference
         }
 
         digitalWrite(LED_BUILTIN, LOW);
@@ -93,6 +99,8 @@ void runInference() {
     float buffer[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE] = { 0 };
 
     for (size_t ix = 0; ix < EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE; ix += 6) {
+        BLE.poll();  // Keep BLE alive during sampling
+
         int64_t next_tick = (int64_t)micros() +
                             ((int64_t)EI_CLASSIFIER_INTERVAL_MS * 1000);
 

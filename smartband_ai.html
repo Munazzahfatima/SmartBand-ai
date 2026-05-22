@@ -661,76 +661,34 @@ async function doConnect() {
     const server = await bleDevice.gatt.connect();
     showToast('GATT connected, finding service...');
 
-    let service = null;
+    // Add timeout to prevent hanging
+    const servicePromise = server.getPrimaryService(BLE_SERVICE_UUID);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Service discovery timeout')), 8000)
+    );
 
-    // Try direct lookup first
-    try {
-      service = await server.getPrimaryService(BLE_SERVICE_UUID);
-    } catch(e1) {
-      showToast('Direct lookup failed, trying all services...');
-      // Fallback: get all services and find ours
-      try {
-        const services = await server.getPrimaryServices();
-        showToast('Found ' + services.length + ' services');
-        for (const s of services) {
-          const uuid = s.uuid.toLowerCase();
-          if (uuid === BLE_SERVICE_UUID || uuid.includes('6e400001')) {
-            service = s;
-            break;
-          }
-        }
-        if (!service && services.length > 0) {
-          // Just use the first available service
-          service = services[0];
-          showToast('Using service: ' + service.uuid);
-        }
-      } catch(e2) {
-        showToast('No services found: ' + e2.message);
-        resetConnectBtn();
-        return;
-      }
-    }
+    const service = await Promise.race([servicePromise, timeoutPromise]);
+    showToast('Service found! Getting characteristic...');
 
-    if (!service) {
-      showToast('Service not found on device');
-      resetConnectBtn();
-      return;
-    }
+    const charPromise = service.getCharacteristic(BLE_CHAR_UUID);
+    const charTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Characteristic timeout')), 5000)
+    );
 
-    showToast('Service found! Getting characteristics...');
-
-    let char = null;
-    try {
-      char = await service.getCharacteristic(BLE_CHAR_UUID);
-    } catch(e) {
-      // Try getting all characteristics
-      showToast('Direct char failed, trying all...');
-      const chars = await service.getCharacteristics();
-      showToast('Found ' + chars.length + ' characteristics');
-      for (const c of chars) {
-        if (c.properties.notify) {
-          char = c;
-          break;
-        }
-      }
-    }
-
-    if (!char) {
-      showToast('No notify characteristic found');
-      resetConnectBtn();
-      return;
-    }
-
-    showToast('Subscribing to notifications...');
-    await char.startNotifications();
-    char.addEventListener('characteristicvaluechanged', onDataReceived);
-    bleChar = char;
+    bleChar = await Promise.race([charPromise, charTimeout]);
+    showToast('Subscribing...');
+    await bleChar.startNotifications();
+    bleChar.addEventListener('characteristicvaluechanged', onDataReceived);
     setConnected(true);
 
   } catch(e) {
     console.error('doConnect error:', e.name, e.message);
-    showToast('Failed: ' + e.name + ' — ' + e.message);
+    showToast('Error: ' + e.message);
     resetConnectBtn();
+    // If timeout, suggest fix
+    if (e.message.includes('timeout')) {
+      setTimeout(() => showToast('Try: forget SmartBand in phone Bluetooth settings'), 3000);
+    }
   }
 }
 
