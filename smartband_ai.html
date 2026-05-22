@@ -1119,8 +1119,9 @@ function showToast(msg) {
 <!-- PWA Service Worker registration -->
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Unregister any existing service worker to prevent caching issues
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(r => r.unregister());
   });
 }
 </script>
