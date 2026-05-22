@@ -15,12 +15,12 @@
 #include <ArduinoBLE.h>
 
 // ── BLE setup ────────────────────────────────────────────────────────────────
-// Using standard short UUIDs — Web Bluetooth expands these automatically
-BLEService activityService("FFE0");
+// Nordic UART Service UUIDs — well supported by ArduinoBLE + Web Bluetooth
+BLEService activityService("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 BLEStringCharacteristic predCharacteristic(
-    "FFE1",
+    "6E400003-B5A3-F393-E0A9-E50E24DCCA9E",
     BLERead | BLENotify,
-    100   // max string length
+    100
 );
 
 static const bool debug_nn = false;
@@ -63,8 +63,8 @@ void setup() {
     BLE.advertise();
 
     Serial.println("BLE advertising as 'SmartBand'");
-    Serial.println("Service UUID : FFE0");
-    Serial.println("Char UUID    : FFE1");
+    Serial.println("Service UUID : 6E400001 (Nordic UART)");
+    Serial.println("Char UUID    : 6E400003 (TX Notify)");
     Serial.println("Waiting for connection...");
     blinkLED(2, 300);
 }
