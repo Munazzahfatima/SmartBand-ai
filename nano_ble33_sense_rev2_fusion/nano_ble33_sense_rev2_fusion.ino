@@ -59,11 +59,12 @@ void setup() {
     BLE.setAdvertisedService(activityService);
     activityService.addCharacteristic(predCharacteristic);
     BLE.addService(activityService);
-
     predCharacteristic.writeValue("READY");
     BLE.advertise();
 
     Serial.println("BLE advertising as 'SmartBand'");
+    Serial.println("Service UUID : FFE0");
+    Serial.println("Char UUID    : FFE1");
     Serial.println("Waiting for connection...");
     blinkLED(2, 300);
 }
