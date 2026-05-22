@@ -15,10 +15,10 @@
 #include <ArduinoBLE.h>
 
 // ── BLE setup ────────────────────────────────────────────────────────────────
-// Custom 128-bit UUIDs — must match the web app exactly
-BLEService activityService("12345678-1234-1234-1234-123456789ABC");
+// Using standard short UUIDs — Web Bluetooth expands these automatically
+BLEService activityService("FFE0");
 BLEStringCharacteristic predCharacteristic(
-    "12345678-1234-1234-1234-123456789ABD",
+    "FFE1",
     BLERead | BLENotify,
     100   // max string length
 );
