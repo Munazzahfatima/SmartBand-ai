@@ -19,7 +19,7 @@
 BLEService activityService("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 BLEStringCharacteristic predCharacteristic(
     "6E400003-B5A3-F393-E0A9-E50E24DCCA9E",
-    BLERead | BLENotify,
+    BLERead | BLENotify | BLEWrite,
     100
 );
 
@@ -82,9 +82,17 @@ void loop() {
         digitalWrite(LED_BUILTIN, HIGH);
 
         while (central.connected()) {
-            BLE.poll();  // Keep BLE stack alive during inference
-            runInference();
-            BLE.poll();  // Poll again after inference
+            BLE.poll();
+
+            // Wait for SAMPLE command from app
+            if (predCharacteristic.written()) {
+                String cmd = predCharacteristic.value();
+                cmd.trim();
+                if (cmd == "SAMPLE") {
+                    Serial.println("Sample requested by app");
+                    runInference();
+                }
+            }
         }
 
         digitalWrite(LED_BUILTIN, LOW);
@@ -165,15 +173,20 @@ void runInference() {
     Serial.println("=============================");
 
     // Build BLE payload  PRED:label1:val1:label2:val2
-    if (first_idx >= 0 && second_idx >= 0) {
+    if (first_idx >= 0) {
+        // Use second if available, otherwise use first again with 0
+        String label2 = (second_idx >= 0) ? 
+            String(result.classification[second_idx].label) : "idle";
+        float val2 = (second_idx >= 0) ? second_val : 0.0f;
+
         String payload = "PRED:";
         payload += result.classification[first_idx].label;
         payload += ":";
         payload += String(first_val, 3);
         payload += ":";
-        payload += result.classification[second_idx].label;
+        payload += label2;
         payload += ":";
-        payload += String(second_val, 3);
+        payload += String(val2, 3);
 
         Serial.println(payload);
         predCharacteristic.writeValue(payload);

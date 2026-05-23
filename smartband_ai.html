@@ -420,8 +420,8 @@ body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);heigh
             <button onclick="simulatePred('writing',0.875,'idle',0.089)" style="background:rgba(68,138,255,0.15);border:1px solid #448AFF;color:#448AFF;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">✍️ Write</button>
             <button onclick="simulatePred('waving',0.934,'walking',0.032)" style="background:rgba(255,109,0,0.15);border:1px solid #FF6D00;color:#FF6D00;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🌊 Wave</button>
             <button onclick="simulatePred('drinking',0.956,'idle',0.021)" style="background:rgba(0,229,255,0.15);border:1px solid #00E5FF;color:#00E5FF;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🥤 Drink</button>
-            <button onclick="simulatePred('excercise',0.841,'walking',0.112)" style="background:rgba(213,0,249,0.15);border:1px solid #D500F9;color:#D500F9;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🏃 Exercise</button>
-            <button onclick="simulatePred('tremor',0.778,'idle',0.156)" style="background:rgba(255,215,64,0.15);border:1px solid #FFD740;color:#FFD740;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">📳 Tremor</button>
+            <button onclick="simulatePred('excercise',0.841,'walking',0.112)" style="background:rgba(213,0,249,0.15);border:1px solid #D500F9;color:#D500F9;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">💪 Exercise</button>
+            <button onclick="simulatePred('tremor',0.778,'idle',0.156)" style="background:rgba(255,215,64,0.15);border:1px solid #FFD740;color:#FFD740;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">🫨 Tremor</button>
             <button onclick="simulatePred('fall',0.932,'idle',0.041)" style="background:rgba(255,23,68,0.15);border:1px solid #FF1744;color:#FF1744;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">⚠️ Fall</button>
             <button onclick="simulatePred('idle',0.891,'writing',0.067)" style="background:rgba(120,144,156,0.15);border:1px solid #78909C;color:#78909C;padding:6px 10px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;cursor:pointer">😴 Idle</button>
           </div>
@@ -479,6 +479,18 @@ body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);heigh
   </div>
 </div>
 
+<!-- TREMOR ALERT -->
+<div id="tremor-alert" style="position:fixed;inset:0;z-index:1000;background:rgba(255,215,64,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;animation:alertIn 0.3s ease-out">
+  <div style="font-size:80px;animation:shake 0.5s ease-in-out infinite alternate">🫨</div>
+  <div style="font-size:28px;font-weight:900;letter-spacing:2px;text-align:center;color:#1a1a00">TREMOR DETECTED</div>
+  <div style="font-size:16px;color:#333;text-align:center;padding:0 20px">Unusual shaking detected.<br>Do you need medical assistance?</div>
+  <div class="alert-timer" id="tremor-timer" style="color:#1a1a00">10</div>
+  <div style="display:flex;flex-direction:column;gap:12px;width:280px;margin-top:10px">
+    <button onclick="dismissTremor()" style="padding:16px;border-radius:14px;background:rgba(0,0,0,0.15);border:2px solid rgba(0,0,0,0.3);color:#1a1a00;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:600;cursor:pointer">✓ I'm Fine</button>
+    <button onclick="callHelp()" style="padding:16px;border-radius:14px;background:#1a1a00;border:none;color:#FFD740;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer">📞 Call for Help</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -494,9 +506,9 @@ const ACTIVITY_MAP = {
   writing:   { emoji: '✍️', color: '#448AFF' },
   waving:    { emoji: '🌊', color: '#FF6D00' },
   drinking:  { emoji: '🥤', color: '#00E5FF' },
-  excercise: { emoji: '🏃', color: '#D500F9' },
+  excercise: { emoji: '💪', color: '#D500F9' },
   idle:      { emoji: '😴', color: '#78909C' },
-  tremor:    { emoji: '📳', color: '#FFD740' },
+  tremor:    { emoji: '🫨', color: '#FFD740' },
   fall:      { emoji: '⚠️', color: '#FF1744' }
 };
 
@@ -848,6 +860,11 @@ function processPrediction(label1, val1, label2, val2) {
   if (label1 === 'fall' && settings.fallAlert) {
     triggerFallAlert();
   }
+
+  // Tremor detection
+  if (label1 === 'tremor' && settings.fallAlert) {
+    triggerTremorAlert();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1077,12 +1094,16 @@ function triggerFallAlert() {
   document.getElementById('fall-alert').classList.add('show');
   if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
 
+  // Beep alarm using Web Audio API
+  playAlarmBeep();
+
   let countdown = 10;
   document.getElementById('alert-timer').textContent = countdown;
   clearInterval(fallTimer);
   fallTimer = setInterval(() => {
     countdown--;
     document.getElementById('alert-timer').textContent = countdown;
+    playAlarmBeep();  // beep every second
     if (countdown <= 0) {
       clearInterval(fallTimer);
       callHelp();
@@ -1090,10 +1111,81 @@ function triggerFallAlert() {
   }, 1000);
 }
 
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);       // A5
+    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1); // C#6
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+
+    gainNode.gain.setValueAtTime(1, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+  } catch(e) {
+    console.warn('Audio not available:', e);
+  }
+}
+
 function dismissFall() {
   clearInterval(fallTimer);
   document.getElementById('fall-alert').classList.remove('show');
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.close();
+  } catch(e) {}
   showToast('Glad you\'re okay!');
+}
+
+let tremorTimer = null;
+function triggerTremorAlert() {
+  document.getElementById('tremor-alert').style.display = 'flex';
+  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+  playTremorBeep();
+
+  let countdown = 10;
+  document.getElementById('tremor-timer').textContent = countdown;
+  clearInterval(tremorTimer);
+  tremorTimer = setInterval(() => {
+    countdown--;
+    document.getElementById('tremor-timer').textContent = countdown;
+    playTremorBeep();
+    if (countdown <= 0) {
+      clearInterval(tremorTimer);
+      callHelp();
+    }
+  }, 1000);
+}
+
+function dismissTremor() {
+  clearInterval(tremorTimer);
+  document.getElementById('tremor-alert').style.display = 'none';
+  showToast('Glad you\'re okay!');
+}
+
+function playTremorBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(660, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(440, ctx.currentTime + 0.15);
+    gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.35);
+  } catch(e) {}
 }
 
 function callHelp() {
