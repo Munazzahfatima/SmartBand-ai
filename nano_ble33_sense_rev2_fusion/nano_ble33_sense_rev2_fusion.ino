@@ -79,18 +79,25 @@ void loop() {
 
     if (central) {
         Serial.print("Connected: "); Serial.println(central.address());
+        Serial.println("Waiting for SAMPLE command from app...");
         digitalWrite(LED_BUILTIN, HIGH);
+
+        // Clear any pending writes
+        while (predCharacteristic.written()) {
+            predCharacteristic.value(); // flush
+        }
 
         while (central.connected()) {
             BLE.poll();
 
-            // Wait for SAMPLE command from app
             if (predCharacteristic.written()) {
                 String cmd = predCharacteristic.value();
                 cmd.trim();
+                Serial.print("Received command: "); Serial.println(cmd);
                 if (cmd == "SAMPLE") {
-                    Serial.println("Sample requested by app");
+                    Serial.println("Running inference...");
                     runInference();
+                    Serial.println("Waiting for next SAMPLE command...");
                 }
             }
         }

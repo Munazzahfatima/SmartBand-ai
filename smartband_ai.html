@@ -755,9 +755,11 @@ function setConnected(val) {
     btn.style.borderColor = '#00E676'; btn.style.color = '#00E676';
     btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Connected — Tap to Disconnect';
     showToast('Connected to ' + settings.deviceName + '!');
-    // Show sample button
+    // Show sample button and update circle
     document.getElementById('sample-btn').style.display = '';
-    document.getElementById('activity-name').textContent = 'Press Sample';
+    document.getElementById('activity-emoji').textContent = '👆';
+    document.getElementById('activity-name').textContent = 'TAP TO SAMPLE';
+    document.getElementById('confidence-big').innerHTML = '--<span>%</span>';
   } else {
     resetConnectBtn();
     showToast('Disconnected.');
@@ -838,7 +840,10 @@ function onDataReceived(e) {
   isSampling = false;
   document.getElementById('activity-countdown').textContent = '';
   const sampleBtn = document.getElementById('sample-btn');
-  if (sampleBtn) sampleBtn.disabled = false;
+  if (sampleBtn) {
+    sampleBtn.disabled = false;
+    sampleBtn.textContent = '🎯 Sample Again';
+  }
 
   processPrediction(label1, val1, label2, val2);
 }
