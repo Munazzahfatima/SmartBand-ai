@@ -73,8 +73,12 @@ body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);heigh
 @keyframes ringPulse{0%{transform:scale(1)}30%{transform:scale(1.05)}100%{transform:scale(1)}}
 .activity-emoji{font-size:52px;line-height:1;transition:transform 0.3s}
 .activity-name{font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-top:6px}
+.activity-countdown{font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--cyan);margin-top:4px;min-height:36px}
 .confidence-big{font-family:'Share Tech Mono',monospace;font-size:42px;font-weight:400;color:var(--cyan);transition:color 0.5s}
 .confidence-big span{font-size:20px;color:var(--text2)}
+.sample-btn{background:transparent;border:2px solid var(--cyan);border-radius:12px;color:var(--cyan);font-family:'Exo 2',sans-serif;font-size:15px;font-weight:600;padding:12px 24px;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
+.sample-btn:active{background:rgba(0,229,255,0.15)}
+.sample-btn:disabled{opacity:0.4;cursor:not-allowed}
 
 /* PRED CARDS */
 .pred-cards{display:flex;flex-direction:column;gap:12px}
@@ -232,8 +236,12 @@ body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);heigh
       <div class="activity-ring" id="activity-ring">
         <div class="activity-emoji" id="activity-emoji">⌚</div>
         <div class="activity-name" id="activity-name">Waiting...</div>
+        <div class="activity-countdown" id="activity-countdown"></div>
       </div>
       <div class="confidence-big" id="confidence-big">--<span>%</span></div>
+      <button class="sample-btn" id="sample-btn" onclick="requestSample()" style="display:none">
+        🎯 Sample Activity
+      </button>
     </div>
 
     <div class="pred-cards">
@@ -504,6 +512,8 @@ let sessionCount = 0;
 let fallTimer = null;
 let deferredInstallPrompt = null;
 let reconnectTimeout = null;
+let countdownTimer = null;
+let isSampling = false;
 
 // ── History (persisted) ──────────────────────────────────────
 let historyData = [];
@@ -733,9 +743,56 @@ function setConnected(val) {
     btn.style.borderColor = '#00E676'; btn.style.color = '#00E676';
     btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Connected — Tap to Disconnect';
     showToast('Connected to ' + settings.deviceName + '!');
+    // Show sample button
+    document.getElementById('sample-btn').style.display = '';
+    document.getElementById('activity-name').textContent = 'Press Sample';
   } else {
     resetConnectBtn();
     showToast('Disconnected.');
+    document.getElementById('sample-btn').style.display = 'none';
+    document.getElementById('activity-name').textContent = 'Waiting...';
+    document.getElementById('activity-countdown').textContent = '';
+    clearInterval(countdownTimer);
+    isSampling = false;
+  }
+}
+
+// ── Sample request ────────────────────────────────────────────
+function requestSample() {
+  if (!isConnected || isSampling) return;
+  isSampling = true;
+
+  const sampleBtn = document.getElementById('sample-btn');
+  sampleBtn.disabled = true;
+
+  // Show countdown in ring
+  const ring = document.getElementById('activity-ring');
+  ring.style.borderColor = 'var(--purple)';
+  ring.style.boxShadow = '0 0 30px rgba(124,77,255,0.4)';
+  document.getElementById('activity-emoji').textContent = '⏱';
+  document.getElementById('activity-name').textContent = 'SAMPLING';
+  document.getElementById('confidence-big').innerHTML = '--<span>%</span>';
+
+  let count = 10;
+  document.getElementById('activity-countdown').textContent = count;
+
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    count--;
+    if (count > 0) {
+      document.getElementById('activity-countdown').textContent = count;
+    } else {
+      clearInterval(countdownTimer);
+      document.getElementById('activity-countdown').textContent = '...';
+      document.getElementById('activity-name').textContent = 'PREDICTING';
+    }
+  }, 1000);
+
+  // Send sample command to Arduino
+  if (bleChar) {
+    try {
+      bleChar.writeValue(new TextEncoder().encode('SAMPLE'));
+    } catch(e) {}
   }
 }
 
@@ -753,7 +810,6 @@ function onDataReceived(e) {
   const raw = new TextDecoder().decode(e.target.value).trim();
   console.log('BLE RX:', raw);
 
-  // Format: PRED:label1:val1:label2:val2
   if (!raw.startsWith('PRED:')) return;
   const parts = raw.split(':');
   if (parts.length < 5) return;
@@ -764,6 +820,14 @@ function onDataReceived(e) {
   const val2   = parseFloat(parts[4]);
 
   if (isNaN(val1) || isNaN(val2)) return;
+
+  // Reset sampling state
+  clearInterval(countdownTimer);
+  isSampling = false;
+  document.getElementById('activity-countdown').textContent = '';
+  const sampleBtn = document.getElementById('sample-btn');
+  if (sampleBtn) sampleBtn.disabled = false;
+
   processPrediction(label1, val1, label2, val2);
 }
 
